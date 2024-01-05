@@ -1,112 +1,138 @@
-# CSDE-cordapp-template-kotlin
 
+# Corda5 Integration Testing
 
-To help make the process of prototyping CorDapps on Corda 5 release more straight forward we have developed the Cordapp Standard Development Environment (CSDE).
+This fork builds on top of CSDE to provide a Quick setup for Corda5 integration tests with Gradle and JUnit5, 
+both local and CI with GitHub Actions. 
 
-The CSDE is obtained by cloning this CSDE-Cordapp-Template-Kotlin repository to your local machine. The CSDE provides:
+> Note: seems corda-runtime-os release-5.0.0 disappeared from GitHub. This branch (v5.0.1-integration-tests) is based on CSDE release/corda-5-0, but uses Corda 5.1.0 and Java 17.
 
-- A pre-setup Cordapp Project which you can use as a starting point to develop your own prototypes.
+You can see all my changes in [this PR](https://github.com/manosbatsis/CSDE-cordapp-integration-testing/pull/1). 
+There's also a Medium article [here](https://medium.com/@manosbatsis/corda5-integration-testing-4e98d6a195cd).
 
-- A base Gradle configuration which brings in the dependencies you need to write and test a Corda 5 Cordapp.
+## Prerequisites
 
-- A set of Gradle helper tasks which speed up and simplify the development and deployment process.
+Same as [CSDE](https://docs.r3.com/en/tools-corda5/csde/prerequisites.html):
 
-- Debug configuration for debugging a local Corda cluster.
+- Azul Zulu JDK 17
+- Git ~v2.24.1
+- Docker Engine ~v20.X.Y or Docker Desktop ~v3.5.X
+- Corda CLI, see [Installing the Corda CLI](https://docs.r3.com/en/platform/corda/5.0/developing-applications/tooling/installing-corda-cli.html)
 
-- The MyFirstFlow code which forms the basis of this getting started documentation, this is located in package com.r3.developers.csdetemplate.flowexample
+## Gradle Setup
 
-- A UTXO example in package com.r3.developers.csdetemplate.utxoexample packages
+The [corda5-testutils](https://github.com/manosbatsis/corda5-testutils) includes a JUnit5 extension 
+for starting the Combined Worker and an API for calling flows etc. Let's add the dependency version to gradle.properties:
 
-- Ability to configure the Members of the Local Corda Network.
-
-To find out how to use the CSDE, please refer to the *Getting Started Using the CSDE* subsection within the *Developing Applications* section in the latest Corda 5 documentation at https://docs.r3.com/
-
-
-## Chat app
-We have built a simple one to one chat app to demo some functionalities of the next gen Corda platform.
-
-In this app you can:
-1. Create a new chat with a counterparty. `CreateNewChatFlow`
-2. List out the chat entries you had. `ListChatsFlow`
-3. Individually query out the history of one chat entry. `GetChatFlowArgs`
-4. Continue chatting within the chat entry with the counterparty. `UpdateChatFlow`
-
-### Setting up
-
-1. We will begin our test deployment with clicking the `startCorda`. This task will load up the combined Corda workers in docker.
-   A successful deployment will allow you to open the REST APIs at: https://localhost:8888/api/v1/swagger#. You can test out some of the
-   functions to check connectivity. (GET /cpi function call should return an empty list as for now.)
-2. We will now deploy the cordapp with a click of `5-vNodeSetup` task. Upon successful deployment of the CPI, the GET /cpi function call should now return the meta data of the cpi you just upload
-
-
-
-### Running the chat app
-
-In Corda 5, flows will be triggered via `POST /flow/{holdingidentityshorthash}` and flow result will need to be view at `GET /flow/{holdingidentityshorthash}/{clientrequestid}`
-* holdingidentityshorthash: the id of the network participants, ie Bob, Alice, Charlie. You can view all the short hashes of the network member with another gradle task called `ListVNodes`
-* clientrequestid: the id you specify in the flow requestBody when you trigger a flow.
-
-#### Step 1: Create Chat Entry
-Pick a VNode identity to initiate the chat, and get its short hash. (Let's pick Alice. Dont pick Bob because Bob is the person who we will have the chat with).
-
-Go to `POST /flow/{holdingidentityshorthash}`, enter the identity short hash(Alice's hash) and request body:
+```properties
+# Corda 5 Test Utils
+corda5TestutilsVersion=1.2.1
 ```
-{
-    "clientRequestId": "create-1",
-    "flowClassName": "com.r3.developers.csdetemplate.utxoexample.workflows.CreateNewChatFlow",
-    "requestBody": {
-        "chatName":"Chat with Bob",
-        "otherMember":"CN=Bob, OU=Test Dept, O=R3, L=London, C=GB",
-        "message": "Hello Bob"
-        }
+
+Now into workflows/build.gradle, we add separate configuration, sourceSets etc. for integration tests:
+
+```kotlin
+// Add integrationTest config
+apply from: "${rootDir}/gradle/integration-test.gradle"
+```
+
+And the corda5-testutils dependency for launching Corda's Combined Worker:
+
+```kotlin
+dependencies {
+    // ...
+    // Kotlin Test
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    // Corda 5 Test Utils
+    testImplementation "com.github.manosbatsis.corda5.testutils:integration-junit5:$corda5TestutilsVersion"
+   // ...
 }
 ```
 
-After trigger the create-chat flow, hop to `GET /flow/{holdingidentityshorthash}/{clientrequestid}` and enter the short hash(Alice's hash) and clientrequestid to view the flow result
 
-#### Step 2: List the chat
-In order to continue the chat, we would need the chat ID. This step will bring out all the chat entries this entity (Alice) has.
-Go to `POST /flow/{holdingidentityshorthash}`, enter the identity short hash(Alice's hash) and request body:
-```
-{
-    "clientRequestId": "list-1",
-    "flowClassName": "com.r3.developers.csdetemplate.utxoexample.workflows.ListChatsFlow",
-    "requestBody": {}
-}
-```
-After trigger the list-chats flow, again, we need to hop to `GET /flow/{holdingidentityshorthash}/{clientrequestid}` and check the result. As the screenshot shows, in the response body,
-we will see a list of chat entries, but it currently only has one entry. And we can see the id of the chat entry. Let's record that id.
+## Sample Test
 
+Here's our [IntegrationTests](workflows/src/integrationTest/kotlin/com/r3/developers/csdetemplate/flowexample/workflows/IntegrationTests.kt):
 
-#### Step 3: Continue the chat with `UpdateChatFlow`
-In this step, we will continue the chat between Alice and Bob.
-Goto `POST /flow/{holdingidentityshorthash}`, enter the identity short hash and request body. Note that here we can have either Alice or Bob's short hash. If you enter Alice's hash,
-this message will be recorded as a message from Alice, vice versa. And the id field is the chat entry id we got from the previous step.
-```
-{
-    "clientRequestId": "update-1",
-    "flowClassName": "com.r3.developers.csdetemplate.utxoexample.workflows.UpdateChatFlow",
-    "requestBody": {
-        "id":" ** fill in id **",
-        "message": "How are you today?"
-        }
-}
-```
-And as for the result of this flow, go to `GET /flow/{holdingidentityshorthash}/{clientrequestid}` and enter the required fields.
+```kotlin
+import com.github.manosbatsis.corda5.testutils.integration.junit5.CombinedWorkerMode
+import com.github.manosbatsis.corda5.testutils.integration.junit5.Corda5NodesConfig
+import com.github.manosbatsis.corda5.testutils.integration.junit5.Corda5NodesExtension
+import com.github.manosbatsis.corda5.testutils.integration.junit5.nodehandles.NodeHandles
+import com.github.manosbatsis.corda5.testutils.rest.client.model.FlowRequest
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-#### Step 4: See the whole chat history of one chat entry
-After a few back and forth of the messaging, you can view entire chat history by calling GetChatFlow.
+// Add the Corda5 nodes extension
+@ExtendWith(Corda5NodesExtension::class)
+open class IntegrationTests {
 
-```
-{
-    "clientRequestId": "get-1",
-    "flowClassName": "com.r3.developers.csdetemplate.utxoexample.workflows.GetChatFlow",
-    "requestBody": {
-        "id":" ** fill in id **",
-        "numberOfRecords":"4"
+    // Optional
+    val config = Corda5NodesConfig(
+
+        authUsername = "admin",
+        authPassword = "admin",
+        baseUrl = "https://localhost:8888/api/v1/",
+        httpMaxWaitSeconds = 120,
+        debug = true,
+        projectDir = Corda5NodesConfig.gradleRootDir,
+        combinedWorkerMode = CombinedWorkerMode.PER_LAUNCHER
+
+    )
+
+    // Corda5 nodes extension provides the NodeHandles
+    @Test
+    fun workFlowTests(nodeHandles: NodeHandles) {
+        // Get node handles
+        val aliceNode = nodeHandles.getByCommonName("Alice")
+        val bobNode = nodeHandles.getByCommonName("Bob")
+
+        // Create flow args
+        val flowArgs = MyFirstFlowStartArgs(bobNode.memberX500Name)
+        // Call Flow
+        val response = aliceNode.waitForFlow(
+            FlowRequest(
+                flowClass = MyFirstFlow::class.java,
+                requestBody = flowArgs,
+                flowResultClass = Message::class.java
+            )
+        )
+
+        // Check status and flow result
+        assertTrue(response.isSuccess())
+        val expectedMessage = Message(bobNode.memberX500Name, "Hello Alice, best wishes from Bob")
+        assertEquals(expectedMessage, response.flowResult)
+
     }
 }
 ```
-And as for the result, you need to go to the Get API again and enter the short hash and client request ID.
 
-Thus, we have concluded a full run through of the chat app. 
+## Testing with Gradle
+
+We have to call integration tests explicitly:
+
+```
+./gradlew build integrationTest
+```
+
+
+## Testing with GitHub Actions
+
+The [corda5-cli-action](https://github.com/manosbatsis/corda5-cli-action) will download, install and cache Corda5 CLI, 
+so the Gradle build will just work. The workflow is [ci.yml](.github/workflows/ci.yml) contains the following:
+
+```yaml
+- name: Setup Corda CLI
+  uses: manosbatsis/corda5-cli-action@v2.0.1
+  with:
+    cli-version: '5.0.1'
+- name: Build with Gradle
+  uses: gradle/gradle-build-action@v2
+  with:
+    arguments: build integrationTest
+```
+## Build Successful
+
+All done. You can see the workflow runs in the repository’s [Actions](https://github.com/manosbatsis/CSDE-cordapp-integration-testing/actions).
+
