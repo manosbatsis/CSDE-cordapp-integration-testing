@@ -35,7 +35,7 @@ jobs:
           java-version: ${{ matrix.java-version }}
           distribution: 'zulu'
       - name: Setup Corda CLI
-        uses: manosbatsis/corda5-cli-action@v2.0.0
+        uses: manosbatsis/corda5-cli-action@v2.0.1
         with:
           cli-version: '5.0.1'
       - name: Build with Gradle
