@@ -8,6 +8,9 @@ plugins {
     id 'maven-publish'
 }
 
+// Add integrationTest config
+apply from: "${rootDir}/gradle/integration-test.gradle"
+
 // Declare dependencies for the modules we will use.
 // A cordaProvided declaration is required for anything that we use that the Corda API provides.
 // This is required to allow us to build CorDapp modules as OSGi bundles that CPI and CPB files are built on.
@@ -50,6 +53,10 @@ dependencies {
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion"
     testImplementation "org.hamcrest:hamcrest-library:$hamcrestVersion"
+    // Kotlin Test
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    // Corda 5 Test Utils
+    testImplementation "com.github.manosbatsis.corda5.testutils:integration-junit5:$corda5TestutilsVersion"
 
 }
 

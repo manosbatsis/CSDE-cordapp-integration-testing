@@ -10,6 +10,7 @@ import net.corda.v5.base.exceptions.CordaRuntimeException
 import net.corda.v5.ledger.utxo.StateAndRef
 import net.corda.v5.ledger.utxo.UtxoLedgerService
 import org.slf4j.LoggerFactory
+import java.time.Instant
 import java.util.*
 
 // A class to hold the deserialized arguments required to start the flow.
@@ -44,8 +45,8 @@ class GetChatFlow: ClientStartableFlow {
         // Note, this code brings all unconsumed states back, then filters them.
         // This is an inefficient way to perform this operation when there are a large number of chats.
         // Note, you will get this error if you input an id which has no corresponding ChatState (common error).
-        val states = ledgerService.findUnconsumedStatesByType(ChatState::class.java)
-        val state = states.singleOrNull {it.state.contractState.id == flowArgs.id}
+        val states = ledgerService.findUnconsumedStatesByExactType(ChatState::class.java, 10, Instant.now())
+        val state = states.results.singleOrNull {it.state.contractState.id == flowArgs.id}
             ?: throw CordaRuntimeException("Did not find an unique unconsumed ChatState with id ${flowArgs.id}")
 
         // Calls resolveMessagesFromBackchain() which retrieves the chat history from the backchain.
