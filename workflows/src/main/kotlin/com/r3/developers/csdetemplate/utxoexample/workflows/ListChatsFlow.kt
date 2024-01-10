@@ -8,6 +8,7 @@ import net.corda.v5.application.marshalling.JsonMarshallingService
 import net.corda.v5.base.annotations.Suspendable
 import net.corda.v5.ledger.utxo.UtxoLedgerService
 import org.slf4j.LoggerFactory
+import java.time.Instant
 import java.util.*
 
 
@@ -38,8 +39,8 @@ class ListChatsFlow : ClientStartableFlow {
         log.info("ListChatsFlow.call() called")
 
         // Queries the VNode's vault for unconsumed states and converts the result to a serializable DTO.
-        val states = ledgerService.findUnconsumedStatesByType(ChatState::class.java)
-        val results = states.map {
+        val states = ledgerService.findUnconsumedStatesByExactType(ChatState::class.java, 10, Instant.now())
+        val results = states.results.map {
             ChatStateResults(
                 it.state.contractState.id,
                 it.state.contractState.chatName,

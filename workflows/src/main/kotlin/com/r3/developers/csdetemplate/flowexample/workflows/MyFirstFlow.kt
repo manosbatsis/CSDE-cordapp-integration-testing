@@ -17,7 +17,7 @@ class MyFirstFlowStartArgs(val otherMember: MemberX500Name)
 // A class which will contain a message, It must be marked with @CordaSerializable for Corda
 // to be able to send from one virtual node to another.
 @CordaSerializable
-class Message(val sender: MemberX500Name, val message: String)
+data class Message(val sender: MemberX500Name, val message: String)
 
 
 // MyFirstFlow is an initiating flow, it's corresponding responder flow is called MyFirstFlowResponder (defined below)
@@ -89,7 +89,7 @@ class MyFirstFlow: ClientStartableFlow {
 
         // The return value of a ClientStartableFlow must always be a String, this String will be passed
         // back as the REST response when the status of the flow is queried on Corda.
-        return response.message
+        return  jsonMarshallingService.format(response)
     }
 }
 
