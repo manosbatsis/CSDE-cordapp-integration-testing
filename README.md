@@ -4,7 +4,7 @@
 This fork builds on top of CSDE to provide a Quick setup for Corda5 integration tests with Gradle and JUnit5, 
 both local and CI with GitHub Actions. 
 
-> Note: seems corda-runtime-os release-5.0.0 disappeared from GitHub. This branch (v5.0.1-integration-tests) is based on CSDE release/corda-5-0, but uses Corda 5.1.0 and Java 17.
+> Note: seems corda-runtime-os release-5.0.0 disappeared from GitHub. This branch (v5.0.1-integration-tests) is based on CSDE release/corda-5-0, but uses Corda 5.0.1 and Java 17.
 
 You can see all my changes in [this PR](https://github.com/manosbatsis/CSDE-cordapp-integration-testing/pull/1). 
 There's also a Medium article [here](https://medium.com/@manosbatsis/corda5-integration-testing-4e98d6a195cd).
